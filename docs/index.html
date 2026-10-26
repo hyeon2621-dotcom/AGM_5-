@@ -187,6 +187,17 @@ footer ul{padding-left:16px;margin-bottom:16px}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
+<script src="https://cdn.amplitude.com/script/7e6c9c67625dc932b6f3f69955fcd2c7.js"></script>
+<script>
+/* Amplitude (US). 공개용 API 키만 사용. 비밀 키는 이 파일에 넣지 않음 */
+if (window.amplitude) {
+  window.amplitude.init('7e6c9c67625dc932b6f3f69955fcd2c7', {
+    serverZone: 'US',
+    fetchRemoteConfig: true,
+    autocapture: { attribution: true, pageViews: true, sessions: true, formInteractions: false, fileDownloads: false, elementInteractions: false }
+  });
+}
+</script>
 </head>
 <body>
 
@@ -467,11 +478,19 @@ footer ul{padding-left:16px;margin-bottom:16px}
     new IntersectionObserver(function(e){ finalIn = e[0].isIntersecting; update(); }).observe(final);
   }
 
+  // Amplitude 이벤트: landing_view / cta_click / store_click / referral_code_copy
+  function track(name, props){ try { if (window.amplitude) window.amplitude.track(name, props || {}); } catch(e){} }
+  track('landing_view', { page: 'landing' });
+  document.querySelectorAll('[data-cta]').forEach(function(el){
+    el.addEventListener('click', function(){ track('cta_click', { position: el.dataset.cta }); });
+  });
+
   // 스토어 버튼: 학습용 페이지라 실제 링크가 없음
   var storeMsg = document.getElementById('storeMsg');
   document.querySelectorAll('[data-store]').forEach(function(a){
     a.addEventListener('click', function(e){
       e.preventDefault();
+      track('store_click', { store: a.dataset.store });
       storeMsg.textContent = '학습용 가상 브랜드 페이지라 실제 스토어로 연결되지 않아요.';
     });
   });
@@ -482,6 +501,7 @@ footer ul{padding-left:16px;margin-bottom:16px}
   document.getElementById('copyBtn').addEventListener('click', function(){
     var v = input.value.trim();
     if (!v) { msg.textContent = '추천인 코드를 먼저 입력해 주세요.'; input.focus(); return; }
+    track('referral_code_copy');
     var fallback = function(){ input.select(); msg.textContent = '코드를 선택했어요. 길게 눌러 복사해 주세요.'; };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(v).then(function(){
