@@ -383,7 +383,7 @@ if (window.amplitude) {
 </section>
 
 <!-- 6. 서비스 소개 -->
-<section class="alt">
+<section class="alt" id="why">
   <div class="wrap">
     <div class="center">
       <span class="eyebrow">WHY NAMGO</span>
@@ -481,8 +481,32 @@ if (window.amplitude) {
   // Amplitude 이벤트: landing_view / cta_click / store_click / referral_code_copy
   function track(name, props){ try { if (window.amplitude) window.amplitude.track(name, props || {}); } catch(e){} }
   track('landing_view', { page: 'landing' });
+
+  // CTA별 노출(cta_impression)·클릭(cta_click) 수집
+  // - position: data-cta 값 (header, hero, benefits, referral, why, sticky, final-ios, final-android)
+  // - 노출: CTA가 화면에 50% 이상 보이면 페이지 로드당 position별 1회만 전송
+  function ctaProps(el){
+    var sec = el.closest('section,header,footer,.sticky');
+    return {
+      position: el.dataset.cta,
+      label: el.textContent.replace(/\s+/g, ' ').trim(),
+      section: sec ? (sec.id || (sec.className || '').split(' ')[0] || sec.tagName.toLowerCase()) : 'unknown'
+    };
+  }
+  var seenCta = {};
+  var ctaObserver = ('IntersectionObserver' in window) ? new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      var pos = en.target.dataset.cta;
+      if (en.isIntersecting && en.intersectionRatio >= 0.5 && !seenCta[pos]) {
+        seenCta[pos] = true;
+        track('cta_impression', ctaProps(en.target));
+        ctaObserver.unobserve(en.target);
+      }
+    });
+  }, { threshold: [0.5] }) : null;
   document.querySelectorAll('[data-cta]').forEach(function(el){
-    el.addEventListener('click', function(){ track('cta_click', { position: el.dataset.cta }); });
+    if (ctaObserver) ctaObserver.observe(el);
+    el.addEventListener('click', function(){ track('cta_click', ctaProps(el)); });
   });
 
   // 스토어 버튼: 학습용 페이지라 실제 링크가 없음
